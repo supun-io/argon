@@ -1,56 +1,38 @@
-extern crate vulkano;
-extern crate winit;
+use std::sync::Arc;
 
-use winit::{Event, EventsLoop, WindowBuilder, WindowEvent, dpi::LogicalSize};
-
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
-
-struct OrcaApplication {
-    events_loop: EventsLoop,
-}
-
-impl OrcaApplication {
-    pub fn initialize() -> Self {
-        let events_loop = Self::init_window();
-
-        Self { events_loop }
-    }
-
-    fn init_window() -> EventsLoop {
-        let events_loop = EventsLoop::new();
-        let _window = WindowBuilder::new()
-            .with_title("Orca")
-            .with_dimensions(LogicalSize::new(f64::from(WIDTH), f64::from(HEIGHT)))
-            .build(&events_loop);
-        events_loop
-    }
-
-    fn main_loop(&mut self) {
-        loop {
-            let mut done = false;
-            self.events_loop.poll_events(|ev| {
-                if let Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } = ev
-                {
-                    done = true
-                }
-            });
-            if done {
-                return;
-            }
-        }
-    }
-}
+use vulkano::VulkanLibrary;
+use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo};
+use vulkano::swapchain::Surface;
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::ControlFlow;
+use winit::event_loop::EventLoop;
+use winit::window::WindowBuilder;
 
 fn main() {
-    let source_file = "./app.argon";
-    let source_code = std::fs::read_to_string(source_file).unwrap();
+    let event_loop = EventLoop::new();
 
-    println!("{}", source_code);
+    let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
+    let required_extensions = Surface::required_extensions(&event_loop);
+    let instance = Instance::new(
+        library,
+        InstanceCreateInfo {
+            flags: InstanceCreateFlags::ENUMERATE_PORTABILITY,
+            enabled_extensions: required_extensions,
+            ..Default::default()
+        },
+    )
+    .expect("failed to create instance");
 
-    let mut app = OrcaApplication::initialize();
-    app.main_loop();
+    let window = Arc::new(WindowBuilder::new().build(&event_loop).unwrap());
+    let surface = Surface::from_window(instance.clone(), window.clone());
+
+    event_loop.run(|event, _, control_flow| match event {
+        Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } => {
+            *control_flow = ControlFlow::Exit;
+        }
+        _ => (),
+    });
 }
