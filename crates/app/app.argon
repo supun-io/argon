@@ -1,0 +1,17 @@
+use argon
+use Button
+
+count int = argon.state(0)
+
+handleClick():
+	count++
+
+---
+
+<root>
+
+	<Button onclick={handleClick}>
+		Click me {count}
+	</Button>
+	
+</root>
